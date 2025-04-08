@@ -1,20 +1,40 @@
-import { StyleSheet, Text, View, Image, FlatList, ActivityIndicator } from "react-native";
-import React from "react";
-import { useRouter } from "expo-router";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  FlatList,
+  ActivityIndicator,
+} from "react-native";
+import React, { useEffect, useState } from "react";
+
 import { images } from "@/constants/images";
 import MovieCard from "@/components/MovieCard";
 import useFetch from "@/services/useFetch";
 import { fetchMovies } from "@/services/api";
 import { icons } from "@/constants/icons";
-import  SearchBar  from "@/components/SearchBar"
+import SearchBar from "@/components/SearchBar";
 
 const search = () => {
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
   const {
     data: movies,
-    loading: moviesLoading,
-    error: movieError,
-  } = useFetch(() => fetchMovies({ query: "" }));
+    loading: Loading,
+    error: Error,
+    refetch: loadMovies,
+    reset,
+  } = useFetch(() => fetchMovies({ query: searchQuery }), false);
+
+  useEffect(() => {
+       const timeoutId = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        await loadMovies();
+      } else {
+        reset();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
   return (
     <View className="flex-1 bg-primary">
       <Image
@@ -41,18 +61,40 @@ const search = () => {
               <Image source={icons.logo} className="w-12 h-10" />
             </View>
             <View className="my-5">
-              <SearchBar placeholder="Search movies..."/>
+              <SearchBar
+                placeholder="Search movies..."
+                value={searchQuery}
+                onChangeText={(text: string) => setSearchQuery(text)}
+              />
             </View>
-            {moviesLoading && (
-              <ActivityIndicator size="large" color="#0000ff" className="my-3"/>
+            {Loading && (
+              <ActivityIndicator
+                size="large"
+                color="#0000ff"
+                className="my-3"
+              />
             )}
-            {movieError && (
+            {Error && (
               <Text className="text-red-500 px-5 my-3">
-                Error: {movieError.message}
-
+                Error: {Error.message}
+              </Text>
+            )}
+            {!Loading && !Error && searchQuery.trim() && movies?.length > 0 && (
+              <Text className="text-xl text-white font-bold">
+                Search Results for{" "}
+                <Text className="text-accent">{searchQuery}</Text>
               </Text>
             )}
           </>
+        }
+        ListEmptyComponent={
+          !Loading && !Error ? (
+            <View className="mt-10 px-5">
+              <Text className="text-center text-white-500">
+                {searchQuery.trim() ? "No movies found" : "Search for a movie"}
+              </Text>
+            </View>
+          ) : null
         }
       />
     </View>
